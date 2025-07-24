@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Charging Optimizer</title>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/annotations.js"></script>
+    <script src="https://code.highcharts.com/highcharts-more.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .controls-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .results-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            border: none;
+        }
+
+        .number-input {
+            width: 80px;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .number-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-upload input[type=file] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-label {
+            display: block;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .file-upload-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .optimize-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .optimize-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
+        }
+
+        .optimize-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c33;
+            margin: 10px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 16px;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0%, 33% { content: '.'; }
+            34%, 66% { content: '..'; }
+            67%, 100% { content: '...'; }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗⚡ EV Charging Optimizer</h1>
+            <p>Optimize your electric vehicle charging strategy for long trips</p>
+        </div>
+
+        <div class="main-content">
+            <div class="controls-panel">
+                <h2>Trip Parameters</h2>
+
+                <div class="control-group">
+                    <label for="xmlFile">Vehicle XML File</label>
+                    <div class="file-upload">
+                        <input type="file" id="xmlFile" accept=".xml" />
+                        <label for="xmlFile" class="file-upload-label">
+                            <span id="fileText">Choose XML File</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="drivingDistance">Driving Distance (miles)</label>
+                    <div class="input-container">
+                        <input type="range" id="drivingDistanceSlider" class="slider" min="100" max="2000" value="1000" step="50">
+                        <input type="number" id="drivingDistance" class="number-input" value="1000" min="100" max="2000" step="50">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="chargerDetourDistance">Charger Detour Distance (miles)</label>
+                    <div class="input-container">
+                        <input type="range" id="chargerDetourDistanceSlider" class="slider" min="0" max="10" value="2.5" step="0.5">
+                        <input type="number" id="chargerDetourDistance" class="number-input" value="2.5" min="0" max="10" step="0.5">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="endRangeRequirement">End Range Requirement (miles)</label>
+                    <div class="input-container">
+                        <input type="range" id="endRangeRequirementSlider" class="slider" min="10" max="100" value="25" step="5">
+                        <input type="number" id="endRangeRequirement" class="number-input" value="25" min="10" max="100" step="5">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="startSoc">Starting SOC (%)</label>
+                    <div class="input-container">
+                        <input type="range" id="startSocSlider" class="slider" min="50" max="100" value="100" step="5">
+                        <input type="number" id="startSoc" class="number-input" value="100" min="50" max="100" step="5">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="minSoc">Minimum SOC (%)</label>
+                    <div class="input-container">
+                        <input type="range" id="minSocSlider" class="slider" min="5" max="30" value="10" step="1">
+                        <input type="number" id="minSoc" class="number-input" value="10" min="5" max="30" step="1">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="chargerSpacing">Charger Spacing (miles)</label>
+                    <div class="input-container">
+                        <input type="range" id="chargerSpacingSlider" class="slider" min="25" max="150" value="75" step="25">
+                        <input type="number" id="chargerSpacing" class="number-input" value="75" min="25" max="150" step="25">
+                    </div>
+                </div>
+
+                <button id="optimizeBtn" class="optimize-btn" disabled>Calculate</button>
+            </div>
+
+            <div class="results-panel">
+                <h2>Optimization Results</h2>
+                <div id="results">
+                    <p style="text-align: center; color: #666; margin-top: 50px;">
+                        Upload an XML file and click "Optimize Trip" to see results
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class EvChargingOptimizer {
+            constructor() {
+                this.vehicleName = null;
+                this.vehicleRange = null;
+                this.chargerPositions = [];
+                this.dpTable = {};
+                this.decisions = {};
+                // Hardcoded speeds (easily visible for adjustment)
+                this.highwaySpeed = 70; // mph
+                this.citySpeed = 30;    // mph
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Remove highwaySpeed and citySpeed from controls
+                const controls = [
+                    'drivingDistance', 'chargerDetourDistance', 'endRangeRequirement',
+                    /*'highwaySpeed', 'citySpeed',*/ 'startSoc', 'minSoc', 'chargerSpacing'
+                ];
+
+                controls.forEach(control => {
+                    const slider = document.getElementById(control + 'Slider');
+                    const input = document.getElementById(control);
+
+                    slider.addEventListener('input', () => {
+                        input.value = slider.value;
+                    });
+
+                    input.addEventListener('input', () => {
+                        slider.value = input.value;
+                    });
+                });
+
+                // File upload
+                document.getElementById('xmlFile').addEventListener('change', this.handleFileUpload.bind(this));
+                
+                // Optimize button
+                document.getElementById('optimizeBtn').addEventListener('click', this.optimizeTrip.bind(this));
+            }
+
+            handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            this.loadChargingCurve(e.target.result);
+                            document.getElementById('fileText').textContent = file.name;
+                            document.getElementById('optimizeBtn').disabled = false;
+                            document.getElementById('optimizeBtn').textContent = 'Optimize Trip';
+                        } catch (error) {
+                            this.showError('Error parsing XML file: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            }
+
+            loadChargingCurve(xmlData) {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlData, 'text/xml');
+                
+                // Check for parsing errors
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    throw new Error('Invalid XML format');
+                }
+
+                const curve = {};
+                
+                // Parse vehicle metadata
+                const metadata = xmlDoc.querySelector('metadata');
+                if (!metadata) throw new Error('Missing metadata section');
+                
+                const nameElement = metadata.querySelector('name');
+                const rangeElement = metadata.querySelector('range_miles');
+                
+                if (!nameElement || !rangeElement) {
+                    throw new Error('Missing vehicle name or range in metadata');
+                }
+                
+                this.vehicleName = nameElement.textContent.trim();
+                this.vehicleRange = parseFloat(rangeElement.textContent.trim());
+
+                // Parse charging curve
+                const chargingCurve = xmlDoc.querySelector('charging_curve');
+                if (!chargingCurve) throw new Error('Missing charging_curve section');
+                
+                const points = chargingCurve.querySelectorAll('point');
+                points.forEach(point => {
+                    const soc = parseInt(point.getAttribute('soc'));
+                    curve[soc] = {
+                        speedKw: parseFloat(point.getAttribute('speed')),
+                        timeMin: parseFloat(point.getAttribute('time')),
+                        energyKwh: parseFloat(point.getAttribute('energy'))
+                    };
+                });
+
+                this.chargingCurve = curve;
+            }
+
+            getParameters() {
+                return {
+                    drivingDistance: parseFloat(document.getElementById('drivingDistance').value),
+                    chargerDetourDistance: parseFloat(document.getElementById('chargerDetourDistance').value),
+                    endRangeRequirement: parseFloat(document.getElementById('endRangeRequirement').value),
+                    highwaySpeed: this.highwaySpeed,
+                    citySpeed: this.citySpeed,
+                    startSoc: parseFloat(document.getElementById('startSoc').value),
+                    minSoc: parseFloat(document.getElementById('minSoc').value),
+                    chargerSpacing: parseFloat(document.getElementById('chargerSpacing').value)
+                };
+            }
+
+            socToMiles(socPercent, vehicleRange) {
+                return (socPercent / 100.0) * vehicleRange;
+            }
+
+            milesToSoc(miles, vehicleRange) {
+                return (miles / vehicleRange) * 100.0;
+            }
+
+            calculateTravelTime(distance, includeDetour, params) {
+                if (includeDetour) {
+                    const highwayTime = (distance + params.chargerDetourDistance) / params.highwaySpeed;
+                    const cityDetourTime = params.chargerDetourDistance / params.citySpeed;
+                    return highwayTime + cityDetourTime;
+                } else {
+                    return distance / params.highwaySpeed;
+                }
+            }
+
+            calculateChargingTime(fromSoc, toSoc) {
+                if (fromSoc >= toSoc) return 0.0;
+                
+                const fromSocInt = Math.max(0, Math.min(100, Math.floor(fromSoc)));
+                const toSocInt = Math.max(0, Math.min(100, Math.floor(toSoc)));
+                
+                const startTime = this.chargingCurve[fromSocInt]?.timeMin || 0;
+                const endTime = this.chargingCurve[toSocInt]?.timeMin || 0;
+                
+                return (endTime - startTime) / 60.0; // Convert minutes to hours
+            }
+
+            canReachPosition(currentPos, currentSoc, targetPos, params) {
+                const distanceNeeded = targetPos - currentPos;
+                const currentRange = this.socToMiles(currentSoc, this.vehicleRange);
+                const minRangeRequired = this.socToMiles(params.minSoc, this.vehicleRange);
+                return (currentRange - distanceNeeded) >= minRangeRequired;
+            }
+
+            getReachableChargers(currentPos, currentSoc, params) {
+                return this.chargerPositions.filter(chargerPos => 
+                    chargerPos > currentPos && 
+                    this.canReachPosition(currentPos, currentSoc, chargerPos, params)
+                );
+            }
+
+            optimizeChargingStrategy(params) {
+                // Generate charger positions
+                this.chargerPositions = [];
+                for (let pos = params.chargerSpacing; pos < params.drivingDistance; pos += params.chargerSpacing) {
+                    this.chargerPositions.push(pos);
+                }
+
+                this.dpTable = {};
+                this.decisions = {};
+                
+                const socLevels = [];
+                for (let soc = Math.floor(params.minSoc); soc <= 100; soc += 1) {
+                    socLevels.push(soc);
+                }
+                
+                const positions = [0, ...this.chargerPositions, params.drivingDistance].sort((a, b) => a - b);
+                
+                // Initialize DP table
+                positions.forEach(pos => {
+                    this.dpTable[pos] = {};
+                    this.decisions[pos] = {};
+                    socLevels.forEach(soc => {
+                        this.dpTable[pos][soc] = Infinity;
+                        this.decisions[pos][soc] = null;
+                    });
+                });
+
+                // Base case: at destination
+                const minEndSoc = this.milesToSoc(params.endRangeRequirement, this.vehicleRange);
+                socLevels.forEach(soc => {
+                    if (soc >= minEndSoc) {
+                        this.dpTable[params.drivingDistance][soc] = 0.0;
+                    }
+                });
+
+                // Fill DP table backwards
+                for (let i = positions.length - 2; i >= 0; i--) {
+                    const currentPos = positions[i];
+
+                    socLevels.forEach(currentSoc => {
+                        // Option 1: Drive directly to end
+                        if (this.canReachPosition(currentPos, currentSoc, params.drivingDistance, params)) {
+                            const distance = params.drivingDistance - currentPos;
+                            const travelTime = this.calculateTravelTime(distance, false, params);
+                            const finalSoc = currentSoc - this.milesToSoc(distance, this.vehicleRange);
+
+                            if (finalSoc >= minEndSoc && travelTime < this.dpTable[currentPos][currentSoc]) {
+                                this.dpTable[currentPos][currentSoc] = travelTime;
+                                this.decisions[currentPos][currentSoc] = ['driveToEnd', null, null];
+                            }
+                        }
+
+                        // Option 2: Go to next chargers
+                        const reachableChargers = this.getReachableChargers(currentPos, currentSoc, params);
+
+                        reachableChargers.forEach(nextCharger => {
+                            const distanceToCharger = (nextCharger - currentPos) + params.chargerDetourDistance;
+                            const travelTimeToCharger = this.calculateTravelTime(nextCharger - currentPos, true, params);
+                            const socAtCharger = currentSoc - this.milesToSoc(distanceToCharger, this.vehicleRange);
+
+                            if (socAtCharger < params.minSoc) return;
+
+                            for (let chargeToSoc = Math.floor(socAtCharger) + 1; chargeToSoc <= 100; chargeToSoc += 1) {
+                                const chargingTime = this.calculateChargingTime(socAtCharger, chargeToSoc);
+
+                                if (this.dpTable[nextCharger][chargeToSoc] !== Infinity) {
+                                    const totalTime = travelTimeToCharger + chargingTime + this.dpTable[nextCharger][chargeToSoc];
+
+                                    if (totalTime < this.dpTable[currentPos][currentSoc]) {
+                                        this.dpTable[currentPos][currentSoc] = totalTime;
+                                        this.decisions[currentPos][currentSoc] = ['charge', nextCharger, chargeToSoc];
+                                    }
+                                }
+                            }
+                        });
+                    });
+                }
+
+                // Reconstruct optimal path
+                const optimalTime = this.dpTable[0][params.startSoc];
+                const path = [];
+                let currentPos = 0;
+                let currentSoc = params.startSoc;
+
+                while (currentPos < params.drivingDistance) {
+                    const decision = this.decisions[currentPos][currentSoc];
+                    if (!decision) break;
+
+                    const [action, nextPos, chargeLevel] = decision;
+
+                    if (action === 'driveToEnd') {
+                        path.push({
+                            action: 'driveToEnd',
+                            fromPosition: currentPos,
+                            toPosition: params.drivingDistance,
+                            socStart: currentSoc,
+                            socEnd: currentSoc - this.milesToSoc(params.drivingDistance - currentPos, this.vehicleRange)
+                        });
+                        break;
+                    } else if (action === 'charge') {
+                        const distance = (nextPos - currentPos) + params.chargerDetourDistance;
+                        const socAtCharger = currentSoc - this.milesToSoc(distance, this.vehicleRange);
+                        
+                        path.push({
+                            action: 'driveAndCharge',
+                            fromPosition: currentPos,
+                            toPosition: nextPos,
+                            socStart: currentSoc,
+                            socAtCharger: socAtCharger,
+                            socAfterCharge: chargeLevel,
+                            chargeTimeHours: this.calculateChargingTime(socAtCharger, chargeLevel)
+                        });
+                        
+                        currentPos = nextPos;
+                        currentSoc = chargeLevel;
+                    }
+                }
+
+                return { optimalTime, path };
+            }
+
+            optimizeTrip() {
+                if (!this.chargingCurve) {
+                    this.showError('Please upload an XML file first');
+                    return;
+                }
+
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '<div class="loading">Optimizing trip</div>';
+
+                // Use setTimeout to allow UI to update
+                setTimeout(() => {
+                    try {
+                        const params = this.getParameters();
+                        const { optimalTime, path } = this.optimizeChargingStrategy(params);
+
+                        if (!path.length || optimalTime === Infinity) {
+                            this.showError(
+                                `ERROR: The charger spacing exceeds the range of the vehicle, given the minimum SoC, or the scenario cannot be solved with the current parameters.\n` +
+                                `Vehicle Range: ${this.vehicleRange} miles\n` +
+                                `Charger Spacing: ${params.chargerSpacing} miles\n` +
+                                `You can decrease the spacing between chargers and try again.`
+                            );
+                            return;
+                        }
+
+                        this.displayResults(optimalTime, path, params);
+                    } catch (error) {
+                        this.showError('Optimization error: ' + error.message);
+                    }
+                }, 100);
+            }
+
+            displayResults(optimalTime, path, params) {
+                // Calculate summary metrics
+                const numDetours = path.filter(step => step.action === 'driveAndCharge').length;
+                const totalDistanceDrivenWithDetours = params.drivingDistance + numDetours * params.chargerDetourDistance;
+                
+                let drivingTime = 0;
+                let detourTime = 0;
+                let chargingTime = 0;
+
+                path.forEach(step => {
+                    const driveDistance = step.toPosition - step.fromPosition;
+                    if (step.action === 'driveAndCharge') {
+                        drivingTime += driveDistance / params.highwaySpeed;
+                        detourTime += params.chargerDetourDistance / params.citySpeed;
+                        chargingTime += step.chargeTimeHours;
+                    } else if (step.action === 'driveToEnd') {
+                        drivingTime += driveDistance / params.highwaySpeed;
+                    }
+                });
+
+                const finalSoc = path[path.length - 1].socEnd || path[path.length - 1].socAfterCharge || 0;
+                const distanceRemainingEndTrip = finalSoc / 100.0 * this.vehicleRange;
+
+                // New summary table
+                const summaryTable = `
+                    <table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
+                        <tr><th style="text-align:left; padding:8px; border-bottom:1px solid #eee;">Charging Stops</th>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${numDetours}</td></tr>
+                        <tr><th style="text-align:left; padding:8px; border-bottom:1px solid #eee;">Driving Time (min)</th>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${(drivingTime * 60).toFixed(1)}</td></tr>
+                        <tr><th style="text-align:left; padding:8px; border-bottom:1px solid #eee;">Charger Detour Time (min)</th>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${(detourTime * 60).toFixed(1)}</td></tr>
+                        <tr><th style="text-align:left; padding:8px; border-bottom:1px solid #eee;">Charging Time (min)</th>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${(chargingTime * 60).toFixed(1)}</td></tr>
+                        <tr><th style="text-align:left; padding:8px; border-bottom:1px solid #eee;">Total Time (min)</th>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${((drivingTime + detourTime + chargingTime) * 60).toFixed(1)}</td></tr>
+                    </table>
+                `;
+
+                const summaryText = 
+`Optimal Total Time: ${optimalTime.toFixed(2)} hours (${(optimalTime * 60).toFixed(1)} minutes)
+Vehicle Model: ${this.vehicleName}
+Vehicle Range: ${this.vehicleRange} miles
+Scenario Distance (miles): ${params.drivingDistance} miles
+Charger Positions (miles): [${this.chargerPositions.join(', ')}]
+
+Summary Table:
+Total Driving Distance, with Detours (miles):    ${totalDistanceDrivenWithDetours.toFixed(1)}
+Number of Charging Stops:    ${numDetours}
+Total Charging Time:    ${chargingTime.toFixed(2)} hours (${(chargingTime * 60).toFixed(1)} minutes)
+
+Scenario Checks:
+Distance Remaining at End of Trip (miles):    ${distanceRemainingEndTrip.toFixed(1)}`;
+
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = `
+                    <div class="summary">${summaryTable}</div>
+                    <div class="summary" style="margin-bottom:30px;">${summaryText}</div>
+                    <div class="chart-container">
+                        <div class="chart-title">Trip Time Breakdown</div>
+                        <div id="timeChart"></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">State of Charge vs. Position</div>
+                        <div id="socChart"></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">Remaining Range vs. Position</div>
+                        <div id="rangeChart"></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">Charging Curve: Speed vs. State of Charge</div>
+                        <div id="curveChart"></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">Trip Timeline: Chargers Used vs. Skipped</div>
+                        <div id="timelineChart"></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">Charger Summary Table</div>
+                        <div id="chargerSummaryTable"></div>
+                    </div>
+                `;
+
+                // Create charts using HighCharts
+                this.createTimeChartHighCharts(drivingTime, detourTime, chargingTime);
+                this.createTripChartsHighCharts(path, params);
+                this.createChargingCurveChartHighCharts();
+                this.createTimelineChart(path, params);
+                this.createChargerSummaryTable(path, params);
+            }
+
+            createTimeChartHighCharts(drivingTime, detourTime, chargingTime) {
+                Highcharts.chart('timeChart', {
+                    chart: { type: 'bar', height: 300 },
+                    title: { text: 'Trip Time Breakdown (Stacked)' },
+                    xAxis: { categories: ['Total Trip Time'], title: { text: null } },
+                    yAxis: { min: 0, title: { text: 'Hours' } },
+                    legend: { reversed: true },
+                    plotOptions: { series: { stacking: 'normal' } },
+                    series: [
+                        { name: 'Charging Time', data: [chargingTime], color: '#2ca02c' },
+                        { name: 'Charger Detour Time', data: [detourTime], color: '#ff7f0e' },
+                        { name: 'Driving Time', data: [drivingTime], color: '#1f77b4' }
+                    ],
+                    annotations: [{
+                        labels: [{
+                            point: {
+                                xAxis: 0,
+                                yAxis: 0,
+                                x: 0,
+                                y: drivingTime + detourTime + chargingTime
+                            },
+                            text: `Total: ${(drivingTime + detourTime + chargingTime).toFixed(2)} h`,
+                            backgroundColor: 'white',
+                            style: { color: 'black', fontSize: '14px' }
+                        }]
+                    }]
+                });
+            }
+
+            createTripChartsHighCharts(path, params) {
+                // Arrays for plotting
+                const times = [];
+                const socs = [];
+                const ranges = [];
+
+                let currentPosition = path[0].fromPosition;
+                let currentSoc = path[0].socStart;
+                let currentTime = 0;
+
+                // Start: leaving the starting point
+                times.push(currentTime);
+                socs.push(currentSoc);
+                ranges.push(currentSoc / 100.0 * this.vehicleRange);
+
+                path.forEach(decision => {
+                    let driveDistance = decision.toPosition - decision.fromPosition;
+                    let driveTime;
+                    if (decision.action === 'driveAndCharge') {
+                        driveTime = this.calculateTravelTime(driveDistance, true, params);
+                    } else {
+                        driveTime = this.calculateTravelTime(driveDistance, false, params);
+                    }
+
+                    // Arrive at charger or end
+                    currentTime += driveTime;
+                    let arriveSoc = (decision.action === 'driveAndCharge') ? decision.socAtCharger : decision.socEnd;
+                    let arriveRange = arriveSoc / 100.0 * this.vehicleRange;
+                    times.push(currentTime);
+                    socs.push(arriveSoc);
+                    ranges.push(arriveRange);
+
+                    // If charging, add a point for leaving the charger (after charging)
+                    if (decision.action === 'driveAndCharge') {
+                        currentTime += decision.chargeTimeHours;
+                        times.push(currentTime);
+                        socs.push(decision.socAfterCharge);
+                        ranges.push(decision.socAfterCharge / 100.0 * this.vehicleRange);
+                    }
+
+                    currentPosition = decision.toPosition;
+                });
+
+                // Prepare data as arrays of {x: time, y: value}
+                const socData = times.map((t, i) => ({ x: t, y: socs[i] }));
+                const rangeData = times.map((t, i) => ({ x: t, y: ranges[i] }));
+
+                // State of Charge Chart (continuous line, time x-axis, all key events)
+                Highcharts.chart('socChart', {
+                    chart: { type: 'line', height: 350 },
+                    title: { text: 'Trip Solution: State of Charge vs. Time' },
+                    xAxis: { 
+                        title: { text: 'Elapsed Time (hours)' },
+                        type: 'linear',
+                        min: 0
+                    },
+                    yAxis: { title: { text: 'State of Charge (%)' }, min: 0, max: 100 },
+                    series: [{
+                        name: 'State of Charge (%)',
+                        data: socData,
+                        color: 'orange',
+                        marker: { symbol: 'circle', enabled: true }
+                    }],
+                    tooltip: { valueDecimals: 1, valueSuffix: '%' }
+                });
+
+                // Remaining Range Chart (continuous line, time x-axis, all key events)
+                Highcharts.chart('rangeChart', {
+                    chart: { type: 'line', height: 350 },
+                    title: { text: 'Trip Solution: Remaining Range vs. Time' },
+                    xAxis: { 
+                        title: { text: 'Elapsed Time (hours)' },
+                        type: 'linear',
+                        min: 0
+                    },
+                    yAxis: { title: { text: 'Remaining Range (miles)' }, min: 0, max: this.vehicleRange },
+                    series: [{
+                        name: 'Remaining Range (miles)',
+                        data: rangeData,
+                        color: 'blue',
+                        marker: { symbol: 'circle', enabled: true }
+                    }],
+                    tooltip: { valueDecimals: 1, valueSuffix: ' mi' }
+                });
+            }
+
+            createChargingCurveChartHighCharts() {
+                const socs = Object.keys(this.chargingCurve).map(Number).sort((a, b) => a - b);
+                const speeds = socs.map(soc => this.chargingCurve[soc].speedKw);
+
+                Highcharts.chart('curveChart', {
+                    chart: { type: 'line', height: 350 },
+                    title: { text: 'Charging Curve: Speed vs. State of Charge' },
+                    xAxis: { title: { text: 'State of Charge (%)' }, categories: socs.map(x => x.toFixed(0)) },
+                    yAxis: { title: { text: 'Charging Speed (kW)' } },
+                    series: [{
+                        name: 'Charging Speed (kW)',
+                        data: speeds,
+                        color: '#2ecc71'
+                    }],
+                    tooltip: { valueDecimals: 1, valueSuffix: ' kW' }
+                });
+            }
+
+            createTimelineChart(path, params) {
+                // 1. Trip Timeline Chart
+                const chargerPositions = this.chargerPositions;
+                const usedChargers = path.filter(step => step.action === 'driveAndCharge').map(step => step.toPosition);
+                const timelineData = chargerPositions.map(pos => ({
+                    x: pos,
+                    y: 1,
+                    marker: {
+                        symbol: usedChargers.includes(pos) ? 'circle' : 'diamond',
+                        fillColor: usedChargers.includes(pos) ? '#2ecc71' : '#ccc',
+                        lineColor: '#333',
+                        radius: usedChargers.includes(pos) ? 8 : 6
+                    },
+                    chargerUsed: usedChargers.includes(pos)
+                }));
+
+                Highcharts.chart('timelineChart', {
+                    chart: { type: 'scatter', height: 120 },
+                    title: { text: null },
+                    xAxis: {
+                        title: { text: 'Position Along Route (miles)' },
+                        min: 0,
+                        max: params.drivingDistance,
+                        tickInterval: params.chargerSpacing
+                    },
+                    yAxis: { visible: false, min: 0, max: 2 },
+                    series: [{
+                        name: 'Chargers',
+                        data: timelineData,
+                        showInLegend: false,
+                        tooltip: {
+                            pointFormatter: function() {
+                                return this.chargerUsed ? 'Charged here' : 'Skipped';
+                            }
+                        }
+                    }]
+                });
+            }
+
+            createChargerSummaryTable(path, params) {
+                // 5. Charger Summary Table
+                const chargerPositions = this.chargerPositions;
+                const usedChargers = path.filter(step => step.action === 'driveAndCharge').map(step => step.toPosition);
+                let tableHtml = `<table style="width:100%; border-collapse:collapse;">
+                    <tr>
+                        <th style="padding:8px; border-bottom:1px solid #eee;">Charger Position (miles)</th>
+                        <th style="padding:8px; border-bottom:1px solid #eee;">Used?</th>
+                        <th style="padding:8px; border-bottom:1px solid #eee;">SoC Before</th>
+                        <th style="padding:8px; border-bottom:1px solid #eee;">SoC After</th>
+                        <th style="padding:8px; border-bottom:1px solid #eee;">Charging Time (min)</th>
+                    </tr>`;
+                chargerPositions.forEach(pos => {
+                    const step = path.find(s => s.action === 'driveAndCharge' && s.toPosition === pos);
+                    tableHtml += `<tr>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${pos}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:center;">
+                            ${step ? '✅' : '❌'}
+                        </td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${step ? step.socAtCharger.toFixed(1) : '-'}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${step ? step.socAfterCharge.toFixed(1) : '-'}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${step ? (step.chargeTimeHours * 60).toFixed(1) : '-'}</td>
+                    </tr>`;
+                });
+                tableHtml += `</table>`;
+                document.getElementById('chargerSummaryTable').innerHTML = tableHtml;
+            }
+
+            showError(message) {
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = `<div class="error">${message}</div>`;
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new EvChargingOptimizer();
+        });
+    </script>
+</body>
+</html>
