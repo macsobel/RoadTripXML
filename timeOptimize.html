@@ -7,6 +7,7 @@
     <script src="https://code.highcharts.com/highcharts.js"></script>
     <script src="https://code.highcharts.com/highcharts-more.js"></script>
     <script src="https://code.highcharts.com/modules/annotations.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         body {
@@ -289,42 +290,42 @@
                 </div>
                 <!-- Trip Controls -->
                 <div class="control-group">
-                    <label for="drivingDistance">Trip Distance (miles)</label>
+                    <label for="drivingDistance" title="How far should the vehicle(s) drive?">Trip Distance (miles)</label>
                     <div class="input-container">
                         <input type="range" id="drivingDistanceSlider" class="slider" min="100" max="3000" value="1000" step="50">
                         <input type="number" id="drivingDistance" class="number-input" value="1000" min="100" max="3000" step="50">
                     </div>
                 </div>
                 <div class="control-group">
-                    <label for="chargerSpacing">Distance Between Chargers (miles)</label>
+                    <label for="chargerSpacing" title="How far apart should the charging stations be?">Distance Between Chargers (miles)</label>
                     <div class="input-container">
                         <input type="range" id="chargerSpacingSlider" class="slider" min="25" max="150" value="50" step="25">
                         <input type="number" id="chargerSpacing" class="number-input" value="50" min="25" max="150" step="25">
                     </div>
                 </div>
                 <div class="control-group">
-                    <label for="chargerDetourDistance">Charger Detour Distance (miles)</label>
+                    <label for="chargerDetourDistance" title="How many miles does the vehicle need to drive off the main route to get to a charger (round-trip)?">Charger Detour Distance (miles)</label>
                     <div class="input-container">
                         <input type="range" id="chargerDetourDistanceSlider" class="slider" min="1" max="10" value="2.5" step="0.5">
                         <input type="number" id="chargerDetourDistance" class="number-input" value="2.5" min="1" max="10" step="0.5">
                     </div>
                 </div>
                 <div class="control-group">
-                    <label for="startSoc">Starting Charge Level (%)</label>
+                    <label for="startSoc" title="What is the charge level of the vehicle when it first departs (%)?">Starting Charge Level (%)</label>
                     <div class="input-container">
                         <input type="range" id="startSocSlider" class="slider" min="50" max="100" value="100" step="5">
                         <input type="number" id="startSoc" class="number-input" value="100" min="50" max="100" step="5">
                     </div>
                 </div>
                 <div class="control-group">
-                    <label for="minSoc">Minimum Charge Level (%)</label>
+                    <label for="minSoc" title="What is the lowest charge level for vehicle during the trip (%)?">Minimum Charge Level (%)</label>
                     <div class="input-container">
                         <input type="range" id="minSocSlider" class="slider" min="5" max="30" value="10" step="1">
                         <input type="number" id="minSoc" class="number-input" value="10" min="5" max="30" step="1">
                     </div>
                 </div>
                 <div class="control-group">
-                    <label for="endRangeRequirement">End of Trip Range Requirement (miles)</label>
+                    <label for="endRangeRequirement" title="What is the minimum range required at the end of the trip (miles)?">End of Trip Range Minimum (miles)</label>
                     <div class="input-container">
                         <input type="range" id="endRangeRequirementSlider" class="slider" min="0" max="100" value="25" step="5">
                         <input type="number" id="endRangeRequirement" class="number-input" value="25" min="0" max="100" step="5">
@@ -373,9 +374,9 @@
                         <div id="rangeChartCombined"></div>
                     </div>
                     <div class="chart-container">
-                        <div class="chart-title">
-                            Decision Explorer
-                            <select id="dpVehicleSelect" style="float:right; font-size:1em; display:none;"></select>
+                        <div class="chart-title">Decision Explorer</div>
+                        <div style="margin-bottom:10px;">
+                            <select id="dpVehicleSelect" style="font-size:1em; display:none;"></select>
                         </div>
                         <div id="dpDecisionExplorer"></div>
                         <div id="dpStepControls" style="margin-top:12px; display:flex; align-items:center; gap:12px;">
@@ -917,7 +918,7 @@ class EvChargingOptimizer {
             const minSocMiles = this.socToMiles(params.minSoc, this.vehicleRange);
             
             // Provide helpful error messages for debugging
-            console.log(`No valid trip found. Required to end with exactly ${endRangeMiles} miles (${endRangeSoc.toFixed(1)}% SoC) remaining.`);
+            console.log(`No valid trip found. Required to end with exactly ${endRangeMiles} miles (${endRangeSoc.toFixed(1)}% charge level) remaining.`);
             if (endRangeMiles < minSocMiles) {
                 console.log(`Note: End range requirement (${endRangeMiles} mi) is below minimum SoC safety margin (${minSocMiles.toFixed(1)} mi).`);
                 console.log(`This is allowed for the final destination but may limit charging options.`);
@@ -996,17 +997,15 @@ class EvChargingOptimizer {
                     const distanceToCharger = (nextCharger - currentPos) + params.chargerDetourDistance;
                     const socAtCharger = currentSoc - this.milesToSoc(distanceToCharger, vehicleRange);
                     if (socAtCharger < params.minSoc) return;
-                    // Snap socAtCharger and chargeToSoc to closest available values
-                    const socAtChargerSnapped = findClosestSoc(socAtCharger, socLevels);
-                    for (let chargeToSoc = Math.ceil(socAtChargerSnapped * 2) / 2 + socStep; chargeToSoc <= 100; chargeToSoc = +(chargeToSoc + socStep).toFixed(2)) {
-                        const chargeToSocSnapped = findClosestSoc(chargeToSoc, socLevels);
-                        const chargingTime = this.calculateChargingTime(socAtChargerSnapped, chargeToSocSnapped);
+                    // Use raw calculated values for display consistency
+                    for (let chargeToSoc = Math.ceil(socAtCharger * 2) / 2 + socStep; chargeToSoc <= 100; chargeToSoc = +(chargeToSoc + socStep).toFixed(2)) {
+                        const chargingTime = this.calculateChargingTime(socAtCharger, chargeToSoc);
                         choices.push({
                             nextCharger,
-                            socAtCharger: socAtChargerSnapped,
-                            chargeToSoc: chargeToSocSnapped,
+                            socAtCharger: socAtCharger, // Use raw value
+                            chargeToSoc: chargeToSoc,   // Use raw value
                             chargingTime,
-                            rangeAfterCharge: (chargeToSocSnapped / 100) * vehicleRange
+                            rangeAfterCharge: (chargeToSoc / 100) * vehicleRange
                         });
                     }
                 });
@@ -1017,8 +1016,8 @@ class EvChargingOptimizer {
                     fromSoc: currentSoc,
                     actual: {
                         toPosition: step.toPosition,
-                        socAtCharger: step.socAtCharger,
-                        socAfterCharge: step.socAfterCharge,
+                        socAtCharger: step.socAtCharger, // Use raw value
+                        socAfterCharge: step.socAfterCharge, // Use raw value
                         chargeTimeHours: step.chargeTimeHours
                     },
                     choices
@@ -1033,8 +1032,8 @@ class EvChargingOptimizer {
                     fromSoc: currentSoc,
                     actual: {
                         toPosition: step.toPosition,
-                        socAtCharger: step.socStart,
-                        socAfterCharge: step.socEnd,
+                        socAtCharger: step.socStart, // Use raw value
+                        socAfterCharge: step.socEnd, // Use raw value
                         chargeTimeHours: 0
                     },
                     choices: [] // No choices, just the final drive
@@ -1144,7 +1143,7 @@ class EvChargingOptimizer {
                 min: 0,
                 max: this.dpExplorerDataByVehicle[this.dpExplorerVehicleIdx].params.drivingDistance
             },
-            yAxis: { title: { text: 'SoC (%)' }, min: 0, max: 100 },
+            yAxis: { title: { text: 'Charge Level (%)' }, min: 0, max: 100 },
             legend: { reversed: true },
             customTotalDistance: this.dpExplorerDataByVehicle[this.dpExplorerVehicleIdx].params.drivingDistance,
             tooltip: {
@@ -1153,8 +1152,8 @@ class EvChargingOptimizer {
                     const totalDistance = chart.options.customTotalDistance || 0;
                     const remainingDistance = (totalDistance - this.x).toFixed(1);
                     return `<b>Location:</b> ${this.x} mi<br/>
-                            <b>SoC (Arrival):</b> ${this.point.socAtCharger.toFixed(1)}%<br/>
-                            <b>SoC (Departure):</b> ${this.y.toFixed(1)}%<br/>
+                            <b>Charge Level (Arrival):</b> ${this.point.socAtCharger.toFixed(1)}%<br/>
+                            <b>Charge Level (Departure):</b> ${this.y.toFixed(1)}%<br/>
                             <b>Range (Departure):</b> ${this.point.rangeAfterCharge.toFixed(1)} mi<br/>
                             <b>Charging Time:</b> ${(this.point.chargingTime * 60).toFixed(1)} min<br/>
                             <b>Remaining Driving Distance:</b> ${remainingDistance} mi`;
@@ -1263,7 +1262,7 @@ class EvChargingOptimizer {
         resultsHtml += [
             ['Total Travel Time', this.formatTime(result1.optimalTime), result2 ? this.formatTime(result2.optimalTime) : null],
             ['Charging Stops', result1.path.filter(s => s.action === 'driveAndCharge').length, result2 ? result2.path.filter(s => s.action === 'driveAndCharge').length : null],
-            ['End Range Achieved', `${endRange1.toFixed(1)} mi`, result2 ? `${endRange2.toFixed(1)} mi` : null]
+            ['End Vehicle Range', `${endRange1.toFixed(1)} mi`, result2 ? `${endRange2.toFixed(1)} mi` : null]
         ].map(([label, v1, v2]) =>
             `<tr><th>${label}</th><td>${v1}</td>${result2 ? `<td>${v2}</td>` : ''}</tr>`
         ).join('');
@@ -1408,6 +1407,45 @@ class EvChargingOptimizer {
      * @param {string} name2 - Display name for second vehicle (optional)
      */
     createTimeChartCombined(times1, times2, name1, name2) {
+        // Helper function to calculate dynamic total based on visible series
+        const calculateVisibleTotal = (times, chart) => {
+            if (!chart || !chart.series) {
+                // Initial load - show total of all three
+                return times.chargingTime + times.detourTime + times.drivingTime;
+            }
+            
+            let total = 0;
+            // Check each series visibility and add to total if visible
+            chart.series.forEach(series => {
+                if (series.visible) {
+                    const seriesIndex = series.index;
+                    if (seriesIndex === 0) total += times.chargingTime;      // Charging Time
+                    else if (seriesIndex === 1) total += times.detourTime;   // Charger Detour Time  
+                    else if (seriesIndex === 2) total += times.drivingTime;  // Driving Time
+                }
+            });
+            return total;
+        };
+        
+        // Helper function to update category labels dynamically
+        const updateCategoryLabels = (chart) => {
+            const times = [times1];
+            const names = [name1];
+            if (times2 && name2) {
+                times.push(times2);
+                names.push(name2);
+            }
+            
+            const newCategories = times.map((timeData, index) => {
+                const visibleTotal = calculateVisibleTotal(timeData, chart);
+                const optimizer = window.optimizer;
+                const formattedTotal = optimizer ? optimizer.formatTime(visibleTotal) : `${visibleTotal.toFixed(2)}h`;
+                return `${names[index]}<br/>(${formattedTotal})`;
+            });
+            
+            chart.xAxis[0].setCategories(newCategories);
+        };
+        
         // Setup data arrays for chart categories and time components
         const totalTime1 = times1.chargingTime + times1.detourTime + times1.drivingTime;
         const categories = [`${name1}<br/>(${this.formatTime(totalTime1)})`]; // Add total time on new line
@@ -1438,12 +1476,29 @@ class EvChargingOptimizer {
                 }
             },
             yAxis: { min: 0, title: { text: 'Hours' } },
-            legend: { reversed: true },
+            legend: { 
+                reversed: true,
+                itemStyle: {
+                    cursor: 'pointer'
+                }
+            },
             plotOptions: { 
                 series: { 
                     stacking: 'normal',
                     dataLabels: {
                         enabled: false // Disable for individual segments to avoid clutter
+                    },
+                    events: {
+                        // Update category labels when series visibility changes
+                        legendItemClick: function() {
+                            const chart = this.chart;
+                            // Use setTimeout to ensure the series visibility has been updated
+                            setTimeout(() => {
+                                updateCategoryLabels(chart);
+                            }, 10);
+                            // Return true to allow default legend behavior
+                            return true;
+                        }
                     }
                 }
             },
@@ -1541,7 +1596,7 @@ class EvChargingOptimizer {
             chart: { type: 'line', height: 350 },
             title: { text: null },
             xAxis: { title: { text: 'Elapsed Time (hours)' }, type: 'linear', min: 0 },
-            yAxis: { title: { text: 'State of Charge (%)' }, min: 0, max: 100 },
+            yAxis: { title: { text: 'Charge Level (%)' }, min: 0, max: 100 },
             series: chartSeries,
             tooltip: { 
                 valueDecimals: 1, 
@@ -1552,7 +1607,7 @@ class EvChargingOptimizer {
                     const timeFormatted = optimizer ? optimizer.formatTime(this.x) : `${this.x.toFixed(1)}h`;
                     return `<b>${this.series.name}</b><br/>
                             Time: ${timeFormatted}<br/>
-                            SoC: ${this.y.toFixed(1)}%`;
+                            Charge Level: ${this.y.toFixed(1)}%`;
                 }
             }
         });
@@ -1614,7 +1669,18 @@ class EvChargingOptimizer {
             xAxis: { title: { text: 'Elapsed Time (hours)' }, type: 'linear', min: 0 },
             yAxis: { title: { text: 'Remaining Range (miles)' }, min: 0 },
             series: chartSeries,
-            tooltip: { valueDecimals: 1, valueSuffix: ' mi' }
+            tooltip: { 
+                valueDecimals: 1, 
+                valueSuffix: ' mi',
+                // Enhanced tooltip showing vehicle name and formatted time
+                formatter: function() {
+                    const optimizer = window.optimizer;
+                    const timeFormatted = optimizer ? optimizer.formatTime(this.x) : `${this.x.toFixed(1)}h`;
+                    return `<b>${this.series.name}</b><br/>
+                            Time: ${timeFormatted}<br/>
+                            Range: ${this.y.toFixed(1)} mi`;
+                }
+            }
         });
     }
 
@@ -1632,7 +1698,7 @@ class EvChargingOptimizer {
         Highcharts.chart('curveChartCombined', {
             chart: { type: 'line', height: 350 },
             title: { text: null },
-            xAxis: { title: { text: 'State of Charge (%)' }, min: 0, max: 100 },
+            xAxis: { title: { text: 'Charge Level (%)' }, min: 0, max: 100 },
             yAxis: { title: { text: 'Charging Speed (kW)' } },
             series: chartSeries,
             tooltip: { valueDecimals: 1, valueSuffix: ' kW' }
@@ -1653,6 +1719,30 @@ class EvChargingOptimizer {
             },
             chargerUsed: usedChargers.includes(pos)
         }));
+
+        // Add start and end points
+        const startPoint = {
+            x: 0,
+            y: 1,
+            marker: {
+                symbol: 'circle',
+                fillColor: '#3498db',
+                lineColor: '#222',
+                radius: 10
+            }
+        };
+
+        const endPoint = {
+            x: params.drivingDistance,
+            y: 1,
+            marker: {
+                symbol: 'circle',
+                fillColor: '#8e44ad',
+                lineColor: '#222',
+                radius: 10
+            }
+        };
+
         Highcharts.chart(chartId, {
             chart: { type: 'scatter', height: 120 },
             title: { text: null },
@@ -1672,6 +1762,26 @@ class EvChargingOptimizer {
                         return this.chargerUsed ? 'Charged here' : 'Skipped';
                     }
                 }
+            }, {
+                name: 'Start',
+                data: [startPoint],
+                color: '#3498db',
+                showInLegend: false,
+                tooltip: {
+                    pointFormatter: function() {
+                        return 'Trip Start';
+                    }
+                }
+            }, {
+                name: 'End',
+                data: [endPoint],
+                color: '#8e44ad',
+                showInLegend: false,
+                tooltip: {
+                    pointFormatter: function() {
+                        return 'Trip End';
+                    }
+                }
             }]
         });
     }
@@ -1682,8 +1792,8 @@ class EvChargingOptimizer {
             <tr>
                 <th style="padding:8px; border-bottom:1px solid #eee;">Charger Position (miles)</th>
                 <th style="padding:8px; border-bottom:1px solid #eee;">Used?</th>
-                <th style="padding:8px; border-bottom:1px solid #eee;">SoC Before</th>
-                <th style="padding:8px; border-bottom:1px solid #eee;">SoC After</th>
+                <th style="padding:8px; border-bottom:1px solid #eee;">Charge Level Before</th>
+                <th style="padding:8px; border-bottom:1px solid #eee;">Charge Level After</th>
                 <th style="padding:8px; border-bottom:1px solid #eee;">Charging Time (min)</th>
             </tr>`;
         chargerPositions.forEach(pos => {
@@ -1715,6 +1825,9 @@ class EvChargingOptimizer {
 document.addEventListener('DOMContentLoaded', () => {
     // Create a new instance of the EV charging optimizer
     const optimizer = new EvChargingOptimizer();
+    
+    // Make optimizer globally accessible for chart tooltips
+    window.optimizer = optimizer;
     
     // Set up all the interactive controls and event handlers
     optimizer.setupDpExplorerControls();
