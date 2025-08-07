@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <vehicle>
   <metadata>
-    <name>Toyota bZ4X AWD</name>
+    <name>Toyota bZ4X</name>
     <range_miles>190</range_miles>
     <range_speed_mph>70</range_speed_mph>
   </metadata>
@@ -108,4 +108,5 @@
     <point soc="99" power="8" time="77.75" energy="63.4"/>
     <point soc="100" power="6" time="83.65" energy="64.0"/>
   </charging_curve>
+
 </vehicle>
