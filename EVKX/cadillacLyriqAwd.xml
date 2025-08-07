@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <vehicle>
   <metadata>
-    <name>Cadillac LYRIQ AWD</name>
+    <name>Cadillac LYRIQ</name>
     <range_miles>290</range_miles>
     <range_speed_mph>70</range_speed_mph>
   </metadata>
