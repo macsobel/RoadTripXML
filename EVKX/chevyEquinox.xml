@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <vehicle>
   <metadata>
-    <name>Chevrolet Equinox EV AWD</name>
+    <name>Chevrolet Equinox EV</name>
     <range_miles>252</range_miles>
     <range_speed_mph>70</range_speed_mph>
   </metadata>
@@ -108,4 +108,5 @@
     <point soc="99" power="22" time="69.70" energy="84.2"/>
     <point soc="100" power="20" time="72.30" energy="85.0"/>
   </charging_curve>
+
 </vehicle>
